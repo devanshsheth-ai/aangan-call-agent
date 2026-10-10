@@ -25,7 +25,7 @@ Classify as exactly one of:
 - "complaint": an existing client with a problem, or an angry caller. A human handles it.
 - "unclear": a dropped call, wrong number, or almost no information.
 
-fit_reason: one sentence that names the deciding criterion (for example "Criterion 2: Nashik is outside Pune/PCMC").
+fit_reason: one sentence that names the deciding criterion (for example "Criterion 2: Nashik is outside Pune/PCMC"). It must contain no currency figure at all; write "the budget the caller mentioned is well below the scope" instead of quoting the amount.
 asked_pricing: true if the caller asked about cost, rates or per-square-foot price, even once.
 segment: "home" or "office" (use "unknown" if not stated).
 booked_slot: only if the caller clearly accepted a specific consultation day and time, give it as an ISO 8601 date-time with the +05:30 offset, resolved against the call date given below (a day name means the next such day after the call). Otherwise null. Never guess.
@@ -89,7 +89,11 @@ ${transcript || "(no transcript)"}`;
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM(knowledge()) }] },
     contents: [{ role: "user", parts: [{ text: user }] }],
-    generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+      ...(/^gemini-3/.test(model) ? { thinkingConfig: { thinkingLevel: "low" } } : {}),
+    },
   });
 
   let res: Response | undefined;
@@ -98,7 +102,7 @@ ${transcript || "(no transcript)"}`;
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": env("GEMINI_API_KEY") },
       body,
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(25_000),
     });
     if (res.ok || !RETRYABLE.has(res.status) || attempt === 2) break;
     await sleep(attempt === 0 ? 1500 : 3000);

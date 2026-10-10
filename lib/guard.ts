@@ -30,6 +30,7 @@ const ESTIMATE_WORDS = new RegExp(
 const MONEY = /₹|\brs\.?\s*\d|\binr\b|\brupees?\b|\b(?:lakh|lakhs|lac|lacs|crore|crores)\b|\b\d[\d,.]*\s*(?:cr|k)\b|\b\d+(?:\.\d+)?l\b/i;
 const BUDGET_WORD = /\bbudget\b/i;
 
+const strictClean = (s: string) => !PER_SQFT.test(s) && !ESTIMATE_WORDS.test(s) && !MONEY.test(s);
 const clean = (s: string) => !PER_SQFT.test(s) && !ESTIMATE_WORDS.test(s) && (!MONEY.test(s) || BUDGET_WORD.test(s));
 
 /** Keep a line if it is clean; otherwise keep only its clean sentences. */
@@ -38,6 +39,12 @@ function cleanLine(line: string): string {
   const parts = line.split(/(?<=[.;!?])\s+(?=[A-Z"'])/);
   const kept = parts.filter(clean).join(" ").trim();
   return clean(kept) ? kept : "";
+}
+
+function strictReason(reason: string): string {
+  if (strictClean(reason)) return reason;
+  const kept = reason.split(/(?<=[.;!?])\s+(?=[A-Z"'])/).filter(strictClean).join(" ").trim();
+  return kept || "Budget the caller mentioned is below the scope (amount withheld)";
 }
 
 export const PRICING_LINE = "Asked about pricing; told designer will cover it.";
@@ -58,7 +65,7 @@ export function guardClassification(c: Classification): Classification {
   const lead = c.lead;
   return {
     ...c,
-    fit_reason: scrubField(c.fit_reason) ?? "See transcript",
+    fit_reason: strictReason(c.fit_reason),
     handoff_note: scrubNote(c.handoff_note, c.asked_pricing),
     lead: {
       ...lead,
