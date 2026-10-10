@@ -48,7 +48,7 @@ for (const [id, want] of Object.entries(expected)) {
     console.log(`${id}  MISSING  (put ${id}.txt in eval/transcripts)`);
     continue;
   }
-  if (!first) await sleep(4000); // stay under the free-tier rate limit
+  if (!first) await sleep(15000); // stay under the free-tier rate limit (about 5 calls a minute)
   first = false;
 
   let got = "error", reason = "", asked: boolean | undefined, leak = false;

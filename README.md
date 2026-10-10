@@ -5,7 +5,7 @@ A dashboard shows results and running cost. **The agent never quotes a price.**
 
 Built for MESA Case 03 (AI and its Application). Stack: Vaani AI, Next.js on Vercel, Neon (Postgres), Gemini Flash, Resend, HubSpot.
 
-- Live app: _add your Vercel link here_
+- Live app: _https://aangan-call-agent-nine.vercel.app (login: user `aangan`, password shared separately)_
 - Component map: [docs/component-map.html](docs/component-map.html)
 - Eval results: [docs/eval-results.md](docs/eval-results.md) (created by `npm run eval`)
 - Setup guide: [docs/SETUP.md](docs/SETUP.md) · Voice agent prompt: [vaani/agent-setup.md](vaani/agent-setup.md)
