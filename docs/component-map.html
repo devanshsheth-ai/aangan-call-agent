@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aangan call agent: component map</title>
+<style>
+  :root { --bg:#faf8f5; --card:#fff; --ink:#1f1d1a; --muted:#6b665e; --line:#e4ded4; --accent:#9a4b1f; --ok:#1f6f4a; --stop:#a42a2a; --chip:#f1ece3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161513; --card:#1f1d1a; --ink:#f1ece3; --muted:#a39d92; --line:#34312c; --accent:#e0905a; --ok:#58c08f; --stop:#e07a7a; --chip:#2a2723; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 56px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .flow { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .flow { grid-template-columns: repeat(3, 1fr); } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; position: relative; }
+  .step { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .card h2 { font-size: 1.05rem; margin: 2px 0 8px; }
+  .card ul { margin: 0; padding-left: 18px; }
+  .card li { margin: 3px 0; }
+  .tag { display:inline-block; background: var(--chip); border:1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: .75rem; color: var(--muted); margin-right: 4px; }
+  .cut { margin-top: 18px; border: 2px solid var(--stop); border-radius: 12px; padding: 16px; background: var(--card); }
+  .cut h2 { margin: 0 0 6px; color: var(--stop); font-size: 1.05rem; }
+  h3 { font-size: 1.05rem; margin: 32px 0 10px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; min-width: 640px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .92rem; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+  tr:last-child td { border-bottom: 0; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 4px; font-size: .86em; }
+  .arrow { text-align:center; color: var(--muted); }
+  .fail td:first-child { color: var(--stop); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Aangan call agent: component map</h1>
+  <p class="sub">Trigger, input, context, processing, AI, output. One phone call, followed from ring to designer inbox.</p>
+
+  <div class="flow">
+    <section class="card">
+      <div class="step">1 · Trigger</div>
+      <h2>A call comes in</h2>
+      <ul>
+        <li>Caller dials the studio number, any hour.</li>
+        <li><b>Vaani AI</b> answers, asks 7 short questions, books a consultation slot.</li>
+        <li>Vaani fires <span class="tag">call_started</span> then <span class="tag">call_postprocessing</span> to our webhook.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <div class="step">2 · Input</div>
+      <h2>Webhook payload</h2>
+      <ul>
+        <li><code>POST /api/vaani/webhook?token=…</code> (Vaani does not sign webhooks, so the secret is in the URL; compared in constant time).</li>
+        <li>Phone number and start time from <code>call_started</code>.</li>
+        <li>Transcript string <code>[hh:mm:ss] AGENT/USER: …</code>, summary, duration (ms, may be missing), recording URL from post-processing.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <div class="step">3 · Context</div>
+      <h2>What the AI is allowed to know</h2>
+      <ul>
+        <li><code>knowledge/qualified.md</code>: Nikhil's five criteria.</li>
+        <li><code>knowledge/services.md</code>: what the studio does and does not do.</li>
+        <li><b><code>pricing.md</code> is never loaded.</b> It is not in the repo, not bundled, not in any prompt.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <div class="step">4 · Processing</div>
+      <h2>Next.js on Vercel + Neon</h2>
+      <ul>
+        <li>Upsert the call row; if already classified, return "duplicate" (idempotent).</li>
+        <li>Atomic claim so two retries never process the same call twice.</li>
+        <li>Call length derived from start → end when Vaani omits it; after-hours flag (outside 10am–7pm IST).</li>
+        <li>Route to a designer: segment match, then fewest leads in the last 7 days.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <div class="step">5 · AI</div>
+      <h2>Gemini Flash classification</h2>
+      <ul>
+        <li>JSON mode, low temperature, transcript treated as untrusted text.</li>
+        <li>Returns <span class="tag">qualified</span><span class="tag">not_fit</span><span class="tag">complaint</span><span class="tag">unclear</span>, the deciding criterion, <code>asked_pricing</code>, segment, lead fields, an 8-line handoff note.</li>
+        <li><b>Price filter in code</b> strips any per-sq-ft, rate or estimate line from the AI output. A caller's own budget passes through.</li>
+        <li>Booked slot only from an explicit caller acceptance, validated to a sane date window.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <div class="step">6 · Output</div>
+      <h2>Independent, best-effort</h2>
+      <ul>
+        <li><b>Qualified:</b> designer email (Resend) with Claim / Reschedule / booking link, and a HubSpot deal.</li>
+        <li><b>Complaint:</b> front-desk email, a human handles it.</li>
+        <li><b>Not fit / unclear:</b> logged only.</li>
+        <li><b>Dashboard:</b> calls, after-hours, qualified, booked, show-ups, won, cost (voice + AI), price slips.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="cut">
+    <h2>The Cut: the agent never quotes a price</h2>
+    Three layers: (1) the voice prompt forbids it, (2) <code>pricing.md</code> is never given to any model, (3) a code filter removes price lines from
+    everything the AI writes, and flags any agent turn that quoted one (shown as "price slips" on the dashboard).
+    Asking about price never disqualifies a caller. Pricing is Nikhil's call, by design.
+  </div>
+
+  <h3>Components</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Component</th><th>Role</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Vaani AI</td><td>Voice agent, webhooks</td><td>app.vaanivoice.ai</td></tr>
+      <tr><td>Webhook route</td><td>Auth, parse, idempotent hand-off to the pipeline</td><td><code>app/api/vaani/webhook/route.ts</code></td></tr>
+      <tr><td>Pipeline</td><td>Orchestrates log, classify, route, outputs</td><td><code>lib/pipeline.ts</code></td></tr>
+      <tr><td>Classifier</td><td>Gemini prompt, JSON coercion, cost</td><td><code>lib/classify.ts</code></td></tr>
+      <tr><td>Price guard</td><td>The Cut in code</td><td><code>lib/guard.ts</code></td></tr>
+      <tr><td>Store</td><td>Neon Postgres tables and view</td><td><code>lib/store.ts</code>, <code>db/migrations/001_init.sql</code></td></tr>
+      <tr><td>Email</td><td>Designer and front-desk handoff</td><td><code>lib/email.ts</code> (Resend)</td></tr>
+      <tr><td>Signed links</td><td>Claim / Reschedule, GET confirm then POST</td><td><code>lib/links.ts</code>, <code>lib/lead-action.ts</code></td></tr>
+      <tr><td>CRM</td><td>HubSpot contact + deal</td><td><code>lib/hubspot.ts</code></td></tr>
+      <tr><td>Dashboard</td><td>Results and cost, password protected</td><td><code>app/page.tsx</code>, <code>middleware.ts</code></td></tr>
+      <tr><td>Eval route</td><td>Dry run on past transcripts, no DB / email / CRM</td><td><code>app/api/eval/route.ts</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>What happens when something breaks</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Failure</th><th>Result</th></tr></thead>
+    <tbody class="fail">
+      <tr><td>Gemini down or returns junk</td><td>Raw transcript is emailed to the front desk and the call is logged as "unclear". The lead is never lost.</td></tr>
+      <tr><td>Database down</td><td>Raw transcript is emailed to the front desk, webhook returns 500, Vaani retries.</td></tr>
+      <tr><td>Designer email fails</td><td>The same email goes to the front desk instead.</td></tr>
+      <tr><td>HubSpot fails or is off</td><td>Logged on the call row; designer email still goes out.</td></tr>
+      <tr><td>Vaani retries a webhook</td><td>Already classified: ignored. Being processed right now: ignored. Stuck for 5 minutes: re-claimed.</td></tr>
+      <tr><td>Email scanner clicks a link</td><td>GET only shows a confirm page. Nothing is recorded until a person presses the button (POST).</td></tr>
+    </tbody>
+  </table>
+  </div>
+</main>
+</body>
+</html>

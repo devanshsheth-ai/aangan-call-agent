@@ -1,0 +1,12 @@
+{
+  "T01": { "classification": "qualified", "why": "Meets all five criteria" },
+  "T02": { "classification": "qualified", "asked_pricing": true, "why": "Asked about pricing; still qualified" },
+  "T03": { "classification": "not_fit", "why": "Nashik, outside Pune/PCMC" },
+  "T04": { "classification": "not_fit", "why": "Advice only, no execution" },
+  "T07": { "classification": "not_fit", "why": "Timeline shorter than the 6-week lead time" },
+  "T09": { "classification": "complaint", "why": "Existing client complaint, a human handles it" },
+  "T10": { "classification": "not_fit", "why": "Budget the caller volunteered is clearly too low" },
+  "T11": { "classification": "qualified", "why": "Rented flat with no structural changes is fine" },
+  "T14": { "classification": "qualified", "why": "Unclear decision-maker is still qualified, with a note" },
+  "T19": { "classification": "not_fit", "why": "Restaurant, outside what the studio does" }
+}

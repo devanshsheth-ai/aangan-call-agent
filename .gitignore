@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+.DS_Store
+
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Case-pack material that should not be public
+knowledge/pricing.md
+eval/transcripts/*
+!eval/transcripts/README.md
